@@ -1,0 +1,12 @@
+udma_hyperbus:
+  files: [
+    rtl/hyperbus_clk_gen.sv,
+    rtl/hyperbus_cmd_addr_gen.sv,
+    rtl/hyperbus_ddr_in.sv,
+    rtl/hyperbus_ddr_out.sv,
+    rtl/hyperbus_phy.sv,
+    rtl/hyperbus_read_clk_rwds.sv,
+    rtl/hyperbus_reg_if.sv,
+    rtl/udma_hyperbus.sv,
+  ]
+
