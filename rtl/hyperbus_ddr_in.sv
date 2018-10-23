@@ -11,7 +11,7 @@
 // Date:
 // Description: Generate the Command-Address to start a transaction
 
-module ddr_in #(
+module hyperbus_ddr_in #(
 )(
     input logic        clk_i,
     input logic        data_i,

@@ -24,7 +24,7 @@
 
 `define log2(VALUE) ((VALUE) < ( 1 ) ? 0 : (VALUE) < ( 2 ) ? 1 : (VALUE) < ( 4 ) ? 2 : (VALUE) < ( 8 ) ? 3 : (VALUE) < ( 16 )  ? 4 : (VALUE) < ( 32 )  ? 5 : (VALUE) < ( 64 )  ? 6 : (VALUE) < ( 128 ) ? 7 : (VALUE) < ( 256 ) ? 8 : (VALUE) < ( 512 ) ? 9 : (VALUE) < ( 1024 ) ? 10 : (VALUE) < ( 2048 ) ? 11 : (VALUE) < ( 4096 ) ? 12 : (VALUE) < ( 8192 ) ? 13 : (VALUE) < ( 16384 ) ? 14 : (VALUE) < ( 32768 ) ? 15 : (VALUE) < ( 65536 ) ? 16 : (VALUE) < ( 131072 ) ? 17 : (VALUE) < ( 262144 ) ? 18 : (VALUE) < ( 524288 ) ? 19 : (VALUE) < ( 1048576 ) ? 20 : (VALUE) < ( 1048576 * 2 ) ? 21 : (VALUE) < ( 1048576 * 4 ) ? 22 : (VALUE) < ( 1048576 * 8 ) ? 23 : (VALUE) < ( 1048576 * 16 ) ? 24 : 25)
 
-module udma_hyper_top 
+module udma_hyperbus
 #(
     parameter L2_AWIDTH_NOAL = 12,
     parameter TRANS_SIZE     = 16
@@ -298,99 +298,88 @@ module udma_hyper_top
         .cfg_hyper_valid_o  ( s_cfg_hyper_valid   ),
         .cfg_hyper_ready_i  ( s_cfg_hyper_ready   )
     );
+    logic [1:0] s_csn;
+    assign hyper_csn0_o = s_csn[0];
+    assign hyper_csn1_o = s_csn[1];
+  hyperbus_phy #(
+    .NR_CS(N_CS),
+    .BURST_WIDTH(BURST_WIDTH)
+  ) i_hyperbus_phy (
+    .clk0                         ( clk0                         ),
+    .clk90                        ( clk90                        ),
+    .rst_ni                       ( rst_ni                       ),
+    .test_en_ti                   ( 1'b0                         ),
+    .config_t_latency_access      ( config_t_latency_access      ),
+    .config_en_latency_additional ( config_en_latency_additional ),
+    .config_t_cs_max              ( config_t_cs_max              ),
+    .config_t_read_write_recovery ( config_t_read_write_recovery ),
+    .config_t_rwds_delay_line     ( config_t_rwds_delay_line     ),
+    .config_t_variable_latency_check ( config_t_variable_latency_check ),
+    .trans_valid_i                ( trans_valid_i                ),
+    .trans_ready_o                ( trans_ready_o                ),
+    .trans_address_i              ( trans_address_i              ),
+    .trans_cs_i                   ( trans_cs_i                   ),
+    .trans_write_i                ( trans_write_i                ),
+    .trans_burst_i                ( trans_burst_i                ),
+    .trans_burst_type_i           ( trans_burst_type_i           ),
+    .trans_address_space_i        ( trans_address_space_i        ),
+    .tx_valid_i                   ( s_hyper_tx_data_valid        ),
+    .tx_ready_o                   ( s_hyper_tx_data_ready        ),
+    .tx_data_i                    ( s_hyper_tx_data              ),
+    .tx_strb_i                    ( 2'b11 ),
+    .rx_valid_o                   ( s_hyper_rx_data_valid        ),
+    .rx_ready_i                   ( s_hyper_rx_data_ready        ),
+    .rx_data_o                    ( s_hyper_rx_data              ),
+    .rx_last_o                    (  ),
+    .rx_error_o                   (  ),
+    .b_valid_o                    (  ),
+    .b_last_o                     (  ),
+    .b_error_o                    (  ),
+    .hyper_cs_no                  ( s_csn                        ),
+    .hyper_ck_o                   ( hyper_clk_o                  ),
+    .hyper_ck_no                  ( hyper_clkn_o                 ),
+    .hyper_rwds_o                 ( hyper_rwds_o                 ),
+    .hyper_rwds_i                 ( hyper_rwds_i                 ),
+    .hyper_rwds_oe_o              ( hyper_rwds_oen_o             ),
+    .hyper_dq_i                   ( hyper_dq_i                   ),
+    .hyper_dq_o                   ( hyper_dq_o                   ),
+    .hyper_dq_oe_o                ( hyper_dq_oen_o               ),
+    .hyper_reset_no               ( hyper_reset_no               ),
+    .debug_hyper_rwds_oe_o        (  ),
+    .debug_hyper_dq_oe_o          (  ),
+    .debug_hyper_phy_state_o      (  )
+  );
 
-    hyper_clkgen_sync u_clockgen_sync
-    (
-        .clk_i           ( periph_clk_i    ),
-        .rstn_i          ( rstn_i          ),
-
-        .dft_test_mode_i ( dft_test_mode_i ),
-        .dft_cg_enable_i ( dft_cg_enable_i ),
-
-        .cfg_rds_delay_adj_i ( s_rds_delay_adj ),
-
-        .csn0_en_i       ( s_csn0_en       ),
-        .csn1_en_i       ( s_csn1_en       ),
-        .csn_i           ( s_csn           ),
-        .ck_en_i         ( s_ck_en         ),
-        .dq_oen_i        ( s_dq_oen        ),
-        .dq_en_i         ( s_dq_en         ),
-        .dq_out0_i       ( s_dq_out0       ),
-        .dq_out1_i       ( s_dq_out1       ),
-        .rwds_oen_i      ( s_rwds_oen      ),
-        .rwds_en_i       ( s_rwds_en       ),
-        .rwds_out0_i     ( s_rwds_out0     ),
-        .rwds_out1_i     ( s_rwds_out1     ),
-        .rds_clk_o       ( s_rds_clk       ),
-        .dq_in0_o        ( s_dq_in0        ),
-        .dq_in1_o        ( s_dq_in1        ),
-        .rwds_in_o       ( s_rwds_in       ),
-
-        .clk_o           ( s_clk_hyper      ),
-
-        .hyper_clk_o     ( hyper_clk_o      ),
-        .hyper_clkn_o    ( hyper_clkn_o     ),
-        .hyper_csn0_o    ( hyper_csn0_o     ),
-        .hyper_csn1_o    ( hyper_csn1_o     ),
-        .hyper_rwds_o    ( hyper_rwds_o     ),
-        .hyper_rwds_oen_o( hyper_rwds_oen_o ),
-        .hyper_rwds_i    ( hyper_rwds_i     ),
-        .hyper_dq_oen_o  ( hyper_dq_oen_o   ),
-        .hyper_dq_o      ( hyper_dq_o       ),
-        .hyper_dq_i      ( hyper_dq_i       )
-
+    io_tx_fifo #(
+      .DATA_WIDTH(16),
+      .BUFFER_DEPTH(4)
+    ) u_fifo_tx (
+        .clk_i      ( sys_clk_i             ),
+        .rstn_i     ( rstn_i                ),
+        .clr_i      ( 1'b0                  ),
+        .data_o     ( s_udma_data_tx        ),
+        .valid_o    ( s_udma_data_tx_valid  ),
+        .ready_i    ( s_udma_data_tx_ready  ),
+        .req_o      ( data_tx_req_o         ),
+        .gnt_i      ( data_tx_gnt_i         ),
+        .valid_i    ( data_tx_valid_i       ),
+        .data_i     ( data_tx_i[15:0]       ),
+        .ready_o    ( data_tx_ready_o       )
     );
-
-    assign s_udma_tx_data[31:16] = 'h0;
 
     udma_dc_fifo #(16,BUFFER_WIDTH) u_dc_tx
     (
         .dst_clk_i          ( s_clk_hyper           ),   
         .dst_rstn_i         ( rstn_i                ),  
-        .dst_data_o         ( s_udma_tx_data[15:0]  ),
-        .dst_valid_o        ( s_udma_tx_data_valid  ),
-        .dst_ready_i        ( s_udma_tx_data_ready  ),
-        .src_clk_i          ( sys_clk_i                 ),
+        .dst_data_o         ( s_hyper_tx_data       ),
+        .dst_valid_o        ( s_hyper_tx_data_valid ),
+        .dst_ready_i        ( s_hyper_tx_data_ready ),
+        .src_clk_i          ( sys_clk_i             ),
         .src_rstn_i         ( rstn_i                ),
-        .src_data_i         ( s_hyper_mux_data_tx       ),
-        .src_valid_i        ( s_hyper_mux_data_tx_valid_fix ),
-        .src_ready_o        ( s_hyper_mux_data_tx_ready )
+        .src_data_i         ( s_udma_data_tx        ),
+        .src_valid_i        ( s_udma_data_tx_valid  ),
+        .src_ready_o        ( s_udma_data_tx_ready  )
     );
-
-
-
-    assign s_hyper_mux_data_tx_valid = s_hyper_data_tx_valid;
-    assign s_hyper_mux_data_tx_valid_fix = s_hyper_tx_two_bytes ?  s_hyper_data_tx_valid & ~r_msb_tx : s_hyper_data_tx_valid;
-    assign s_hyper_tx_two_bytes          = cfg_tx_size_o[0] ^ cfg_tx_size_o[1];
-    assign s_hyper_data_tx_ready     = r_msb_tx & s_hyper_mux_data_tx_ready;
-    assign s_hyper_mux_data_tx       = r_msb_tx ? s_hyper_data_tx[31:16] : s_hyper_data_tx[15:0];
-
-    always_ff @(posedge sys_clk_i or negedge rstn_i) begin
-        if(~rstn_i) begin
-            r_msb_tx <= 0;
-        end else begin
-            if (s_hyper_data_tx_valid && s_hyper_mux_data_tx_ready)
-                r_msb_tx <= ~r_msb_tx;
-        end
-    end
-
-    io_tx_fifo #(
-      .DATA_WIDTH(32),
-      .BUFFER_DEPTH(4)
-    ) u_fifo_tx (
-        .clk_i      (sys_clk_i                 ),
-        .rstn_i     (rstn_i                ),
-        .clr_i      (1'b0                  ),
-        .data_o     (s_hyper_data_tx       ),
-        .valid_o    (s_hyper_data_tx_valid ),
-        .ready_i    (s_hyper_data_tx_ready ),
-        .req_o      (data_tx_req_o         ),
-        .gnt_i      (data_tx_gnt_i         ),
-        .valid_i    (data_tx_valid_i       ),
-        .data_i     (data_tx_i             ),
-        .ready_o    (data_tx_ready_o       )
-    );
-
 
     udma_dc_fifo #(32,BUFFER_WIDTH) u_dc_rx
     (
@@ -401,9 +390,9 @@ module udma_hyper_top
         .dst_ready_i        ( data_rx_ready_i      ),
         .src_clk_i          ( s_clk_hyper          ),  
         .src_rstn_i         ( rstn_i               ),  
-        .src_data_i         ( s_udma_mux_rx_data       ),
-        .src_valid_i        ( s_udma_mux_rx_data_valid_fix ),
-        .src_ready_o        ( s_udma_mux_rx_data_ready )
+        .src_data_i         ( s_hyper_data_rx       ),
+        .src_valid_i        ( s_hyper_data_rx_valid ),
+        .src_ready_o        ( s_hyper_data_rx_ready )
     );
 
     udma_dc_fifo #(42,6) u_dc_trans
@@ -419,99 +408,5 @@ module udma_hyper_top
         .dst_valid_o        ( s_trans_valid_fifo  ),
         .dst_ready_i        ( s_trans_ready_fifo  )
     );
-
-    hyper_ctrl_wrapper i_hyper_ctrl (
-      .clk_i  ( s_clk_hyper ),
-      .rstn_i ( rstn_i ),
-
-        .trans_valid_i   ( s_trans_valid ),
-        .trans_ready_o   ( s_trans_ready ),
-        .trans_rwn_i     ( s_trans_rwn   ),
-        .trans_address_i ( s_trans_addr  ),
-        .trans_burst_i   ( s_trans_burst ),
-        .trans_len_i     ( s_trans_len   ),
-
-        .datatx_valid_i  ( s_udma_tx_data_valid ),
-        .datatx_ready_o  ( s_udma_tx_data_ready ),
-        .datatx_data_i   ( s_udma_tx_data ),
-        .datatx_strb_i   ( 4'b0011 ),
-
-        .datarx_valid_o  ( s_udma_rx_data_valid ),
-        .datarx_ready_i  ( s_udma_rx_data_ready ),
-        .datarx_data_o   ( s_udma_rx_data ),
-        .datarx_strb_o   (  ),
-
-        .cfg_wrap_size0_i    ( s_wrap_size0   ),
-        .cfg_wrap_size1_i    ( s_wrap_size1   ),
-        .cfg_mbr0_i          ( s_mbr0         ),
-        .cfg_mbr1_i          ( s_mbr1         ),
-        .cfg_latency0_i      ( s_latency0     ),
-        .cfg_latency1_i      ( s_latency1     ),
-        .cfg_rd_cshi0_i      ( s_rd_cshi0     ),
-        .cfg_rd_cshi1_i      ( s_rd_cshi1     ),
-        .cfg_rd_css0_i       ( s_rd_css0      ),
-        .cfg_rd_css1_i       ( s_rd_css1      ),
-        .cfg_rd_csh0_i       ( s_rd_csh0      ),
-        .cfg_rd_csh1_i       ( s_rd_csh1      ),
-        .cfg_wr_cshi0_i      ( s_wr_cshi0     ),
-        .cfg_wr_cshi1_i      ( s_wr_cshi1     ),
-        .cfg_wr_css0_i       ( s_wr_css0      ),
-        .cfg_wr_css1_i       ( s_wr_css1      ),
-        .cfg_wr_csh0_i       ( s_wr_csh0      ),
-        .cfg_wr_csh1_i       ( s_wr_csh1      ),
-        .cfg_rd_max_length0_i( s_rd_max_length0 ),
-        .cfg_rd_max_length1_i( s_rd_max_length1 ),
-        .cfg_wr_max_length0_i( s_wr_max_length0 ),
-        .cfg_wr_max_length1_i( s_wr_max_length1 ),
-
-        .cfg_acs0_i           ( s_acs0           ),
-        .cfg_tco0_i           ( s_tco0           ),
-        .cfg_dt0_i            ( s_dt0            ),
-        .cfg_crt0_i           ( s_crt0           ),
-        .cfg_rd_max_len_en0_i ( s_rd_max_len_en0 ),
-        .cfg_wr_max_len_en0_i ( s_wr_max_len_en0 ),
-        .cfg_acs1_i           ( s_acs1           ),
-        .cfg_tco1_i           ( s_tco1           ),
-        .cfg_dt1_i            ( s_dt1            ),
-        .cfg_crt1_i           ( s_crt1           ),
-        .cfg_rd_max_len_en1_i ( s_rd_max_len_en1 ),
-        .cfg_wr_max_len_en1_i ( s_wr_max_len_en1 ),
-
-        .csn0_en_o       ( s_csn0_en   ),
-        .csn1_en_o       ( s_csn1_en   ),
-        .csn_o           ( s_csn       ),
-        .ck_en_o         ( s_ck_en     ),
-        .dq_oen_o        ( s_dq_oen    ),
-        .dq_en_o         ( s_dq_en     ),
-        .dq_out0_o       ( s_dq_out0   ),
-        .dq_out1_o       ( s_dq_out1   ),
-        .rwds_oen_o      ( s_rwds_oen  ),
-        .rwds_en_o       ( s_rwds_en   ),
-        .rwds_out0_o     ( s_rwds_out0 ),
-        .rwds_out1_o     ( s_rwds_out1 ),
-        .rds_clk_i       ( s_rds_clk   ),
-        .dq_in0_i        ( s_dq_in0    ),
-        .dq_in1_i        ( s_dq_in1    ),
-        .rwds_in_i       ( s_rwds_in   )
-    );
-
-    assign s_udma_rx_data_ready     = s_udma_mux_rx_data_ready;
-    assign s_udma_mux_rx_data_valid = r_msb_rx & s_udma_rx_data_valid;
-    assign s_udma_mux_rx_data_valid_fix =  s_udma_rx_two_bytes ? s_udma_rx_data_valid : s_udma_mux_rx_data_valid;
-    assign s_udma_rx_two_bytes          = cfg_rx_size_o[0] ^ cfg_rx_size_o[1];
-    assign s_udma_mux_rx_data       = {s_udma_rx_data[15:0],r_lsb_data_rx};
-
-    always_ff @(posedge s_clk_hyper or negedge rstn_i) begin
-        if(~rstn_i) begin
-            r_msb_rx <= 0;
-            r_lsb_data_rx <= 0;
-        end else begin
-            if (s_udma_rx_data_valid && s_udma_mux_rx_data_ready & ~s_udma_rx_two_bytes)
-            begin
-                r_lsb_data_rx <= s_udma_rx_data[15:0];
-                r_msb_rx      <= ~r_msb_rx;
-            end
-        end
-    end
 
 endmodule

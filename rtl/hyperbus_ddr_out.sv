@@ -9,7 +9,7 @@
 
 /// A single to double data rate converter.
 
-module ddr_out #(
+module hyperbus_ddr_out #(
     parameter logic INIT = 1'b0
 )(
     input  logic clk_i,

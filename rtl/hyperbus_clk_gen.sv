@@ -8,7 +8,7 @@
 // permission from ETH Zurich.
 
 // Description: Generates 4 phase shifted clocks out of one faster clock
-module clk_gen (
+module hyperbus_clk_gen (
     input  logic clk_i,     // input clock
     input  logic rst_ni,
     output logic clk0_o,    // have the input clock - 0deg phase shift

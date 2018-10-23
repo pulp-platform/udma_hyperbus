@@ -11,7 +11,7 @@
 // Date:
 // Description: Generate the Command-Address to start a transaction
 
-module cmd_addr_gen #(
+module hyperbus_cmd_addr_gen #(
 )(
 	input logic              rw_i,              //1-read, 0-write
 	input logic              address_space_i,   //0-memory, 1-register
