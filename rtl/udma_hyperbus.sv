@@ -90,137 +90,72 @@ module udma_hyperbus
 );
 
     localparam BUFFER_WIDTH=8;
+    localparam MODE_BITS = 3;
+    localparam TRANS_FIFO_SIZE = 32 + TRANS_SIZE + MODE_BITS + 1;  
 
-    logic [31:0] s_udma_rx_data;
-    logic        s_udma_rx_data_valid;
-    logic        s_udma_rx_data_ready;
+    logic                [31:0] s_udma_rx_data;
+    logic                       s_udma_rx_data_valid;
+    logic                       s_udma_rx_data_ready;
 
-    logic [31:0] s_udma_mux_rx_data;
-    logic        s_udma_mux_rx_data_valid;
-    logic        s_udma_mux_rx_data_valid_fix;
-    logic        s_udma_mux_rx_data_ready;
-    logic        s_udma_rx_two_bytes;
+    logic                [31:0] s_udma_tx_data;
+    logic                       s_udma_tx_data_valid;
+    logic                       s_udma_tx_data_ready;
 
-    logic [31:0] s_udma_tx_data;
-    logic        s_udma_tx_data_valid;
-    logic        s_udma_tx_data_ready;
-    logic        s_hyper_tx_two_bytes;
+    logic                [31:0] s_hyper_tx_data;
+    logic                       s_hyper_tx_data_valid;
+    logic                       s_hyper_tx_data_ready;
 
-    logic [31:0] s_hyper_data_tx;
-    logic        s_hyper_data_tx_valid;
-    logic        s_hyper_data_tx_ready;
+    logic                [31:0] s_hyper_rx_data;
+    logic                       s_hyper_rx_data_valid;
+    logic                       s_hyper_rx_data_ready;
 
-    logic        s_clk_hyper;
+    logic                [15:0] s_phy_tx_data;
+    logic                       s_phy_tx_data_valid;
+    logic                       s_phy_tx_data_ready;
 
-    logic        s_csn0_en; 
-    logic        s_csn1_en; 
-    logic        s_csn; 
-    logic        s_ck_en;
-    logic        s_ck_en_fix; 
-    logic        s_ck_no_en; 
+    logic                [15:0] s_phy_rx_data;
+    logic                       s_phy_rx_data_valid;
+    logic                       s_phy_rx_data_ready;
 
-    logic        s_dq_oen; 
-    logic        s_dq_en; 
-    logic  [7:0] s_dq_out0; 
-    logic  [7:0] s_dq_out1; 
-    logic        s_rwds_oen; 
-    logic        s_rwds_en; 
-    logic        s_rwds_out0; 
-    logic        s_rwds_out1; 
-    logic        s_rds_clk; 
-    logic  [7:0] s_dq_in0; 
-    logic  [7:0] s_dq_in1; 
-    logic        s_rwds_in; 
+    logic                       s_clk_hyper;
 
-    logic [15:0] s_hyper_mux_data_tx;
-    logic        s_hyper_mux_data_tx_valid;
-    logic        s_hyper_mux_data_tx_valid_fix;
-    logic        s_hyper_mux_data_tx_ready;
 
-    logic [15:0] r_lsb_data_rx;
+    logic   [TRANS_FIFO_SIZE-1] s_cfg_trans_data;
+    logic                       s_cfg_trans_valid;
+    logic                       s_cfg_trans_ready;
 
-    logic  [1:0] s_wrap_size0;
-    logic  [1:0] s_wrap_size1;
-    logic  [7:0] s_mbr0;
-    logic  [7:0] s_mbr1;
-    logic  [3:0] s_latency0;
-    logic  [3:0] s_latency1;
-    logic  [3:0] s_rd_cshi0;
-    logic  [3:0] s_rd_cshi1;
-    logic  [3:0] s_rd_css0;
-    logic  [3:0] s_rd_css1;
-    logic  [3:0] s_rd_csh0;
-    logic  [3:0] s_rd_csh1;
-    logic  [3:0] s_wr_cshi0;
-    logic  [3:0] s_wr_cshi1;
-    logic  [3:0] s_wr_css0;
-    logic  [3:0] s_wr_css1;
-    logic  [3:0] s_wr_csh0;
-    logic  [3:0] s_wr_csh1;
-    logic  [8:0] s_rd_max_length0;
-    logic  [8:0] s_rd_max_length1;
-    logic  [8:0] s_wr_max_length0;
-    logic  [8:0] s_wr_max_length1;
+    logic    [TRANS_ARG_SIZE-1] s_cfg_arg_data;
+    logic                       s_cfg_arg_valid;
+    logic                       s_cfg_arg_ready;
 
-    logic        s_acs0;
-    logic        s_tco0;
-    logic        s_dt0;
-    logic        s_crt0;
-    logic        s_rd_max_len_en0;
-    logic        s_wr_max_len_en0;
 
-    logic        s_acs1;
-    logic        s_tco1;
-    logic        s_dt1;
-    logic        s_crt1;
-    logic        s_rd_max_len_en1;
-    logic        s_wr_max_len_en1;
+    logic                       s_trans_hyper_valid;
+    logic                       s_trans_hyper_ready;
+    logic      [TRANS_SIZE-1:0] s_trans_hyper_len;
+    logic                 [1:0] s_trans_hyper_burst;
+    logic                [31:0] s_trans_hyper_addr;
+    logic [TRANS_FIFO_SIZE-1:0] s_trans_hyper_data;
 
-    logic        s_clkdiv_en;
-    logic        s_trans_rwn;
-    logic        s_cfg_hyper_valid;
-    logic        s_cfg_hyper_ready;
+    logic                       s_phy_trans_valid;
+    logic                       s_phy_trans_ready;
+    logic                [31:0] s_phy_trans_address;
+    logic                 [1:0] s_phy_trans_cs;
+    logic                       s_phy_trans_write;
+    logic      [TRANS_SIZE-1:0] s_phy_trans_burst;
+    logic                 [1:0] s_phy_trans_burst_type;
+    logic                       s_phy_trans_address_space;
+ 
+    logic                       s_cfg_en_latency_additional;
+    logic                 [3:0] s_cfg_latency_access;
+    logic                [15:0] s_cfg_cs_max;
+    logic                 [3:0] s_cfg_read_write_recovery;
+    logic                 [2:0] s_cfg_rwds_delay_line;
+    logic                 [1:0] s_cfg_variable_latency_check;
 
-    assign s_clkdiv_en = 1'b1;
 
-    assign data_tx_datasize_o = 2'b10;
-    assign data_rx_datasize_o = 2'b10;
-
-    logic [31:0] s_cfg_hyper_addr;
-    logic        s_cfg_hyper_rwn;
-    logic  [8:0] s_cfg_hyper_size;
-
-    logic        s_trans_valid;
-    logic        s_trans_ready;
-    logic  [8:0] s_trans_len;
-    logic  [1:0] s_trans_burst;
-    logic [31:0] s_trans_addr;
-    logic [41:0] s_trans_data;
-
-    logic [41:0] s_trans_sys_data;
-
-    logic        r_msb_tx;
-    logic        r_msb_rx;
-
-    logic [2:0] s_rds_delay_adj;
-
-    logic s_trans_valid_fifo;
-    logic s_trans_ready_fifo;
-    logic s_trans_stall;
-
-    //do NOT enque a write transfer if data is not available
-    assign s_trans_stall      = s_trans_valid_fifo & ~s_trans_rwn & ~s_udma_tx_data_valid;
-    assign s_trans_ready_fifo = s_trans_stall ? 1'b0 : s_trans_ready;
-    assign s_trans_valid      = s_trans_stall ? 1'b0 : s_trans_valid_fifo;
-
-    assign s_trans_sys_data[31:0]  = s_cfg_hyper_addr;
-    assign s_trans_sys_data[32]    = s_cfg_hyper_rwn;
-    assign s_trans_sys_data[41:33] = s_cfg_hyper_size - 1;
-
-    assign s_trans_rwn   = s_trans_data[32];
-    assign s_trans_addr  = s_trans_data[31:0];
-    assign s_trans_burst = 2'b01;
-    assign s_trans_len   = s_trans_data[41:33];
+    logic [1:0] s_csn;
+    assign hyper_csn0_o = s_csn[0];
+    assign hyper_csn1_o = s_csn[1];
 
     hyper_reg_if #(
         .L2_AWIDTH_NOAL(L2_AWIDTH_NOAL),
@@ -256,102 +191,131 @@ module udma_hyperbus
         .cfg_tx_curr_addr_i ( cfg_tx_curr_addr_i  ),
         .cfg_tx_bytes_left_i( cfg_tx_bytes_left_i ),
 
-        .cfg_wrap_size0_o    ( s_wrap_size0   ),
-        .cfg_wrap_size1_o    ( s_wrap_size1   ),
-        .cfg_mbr0_o          ( s_mbr0         ),
-        .cfg_mbr1_o          ( s_mbr1         ),
-        .cfg_latency0_o      ( s_latency0     ),
-        .cfg_latency1_o      ( s_latency1     ),
-        .cfg_rd_cshi0_o      ( s_rd_cshi0     ),
-        .cfg_rd_cshi1_o      ( s_rd_cshi1     ),
-        .cfg_rd_css0_o       ( s_rd_css0      ),
-        .cfg_rd_css1_o       ( s_rd_css1      ),
-        .cfg_rd_csh0_o       ( s_rd_csh0      ),
-        .cfg_rd_csh1_o       ( s_rd_csh1      ),
-        .cfg_wr_cshi0_o      ( s_wr_cshi0     ),
-        .cfg_wr_cshi1_o      ( s_wr_cshi1     ),
-        .cfg_wr_css0_o       ( s_wr_css0      ),
-        .cfg_wr_css1_o       ( s_wr_css1      ),
-        .cfg_wr_csh0_o       ( s_wr_csh0      ),
-        .cfg_wr_csh1_o       ( s_wr_csh1      ),
-        .cfg_rd_max_length0_o( s_rd_max_length0 ),
-        .cfg_rd_max_length1_o( s_rd_max_length1 ),
-        .cfg_wr_max_length0_o( s_wr_max_length0 ),
-        .cfg_wr_max_length1_o( s_wr_max_length1 ),
-        .cfg_acs0_o           ( s_acs0           ),
-        .cfg_tco0_o           ( s_tco0           ),
-        .cfg_dt0_o            ( s_dt0            ),
-        .cfg_crt0_o           ( s_crt0           ),
-        .cfg_rd_max_len_en0_o ( s_rd_max_len_en0 ),
-        .cfg_wr_max_len_en0_o ( s_wr_max_len_en0 ),
-        .cfg_acs1_o           ( s_acs1           ),
-        .cfg_tco1_o           ( s_tco1           ),
-        .cfg_dt1_o            ( s_dt1            ),
-        .cfg_crt1_o           ( s_crt1           ),
-        .cfg_rd_max_len_en1_o ( s_rd_max_len_en1 ),
-        .cfg_wr_max_len_en1_o ( s_wr_max_len_en1 ),
-        .cfg_rds_delay_adj_o  ( s_rds_delay_adj  ),
+        .cfg_latency_access_o         ( s_cfg_latency_access            ),
+        .cfg_en_latency_additional_o  ( s_cfg_en_latency_additional     ),
+        .cfg_cs_max_o                 ( s_cfg_cs_max                    ),
+        .cfg_read_write_recovery_o    ( s_cfg_read_write_recovery       ),
+        .cfg_rwds_delay_line_o        ( s_cfg_rwds_delay_line           ),
+        .cfg_variable_latency_check_o ( s_cfg_variable_latency_check    ),
 
-        .cfg_hyper_addr_o   ( s_cfg_hyper_addr    ),
-        .cfg_hyper_size_o   ( s_cfg_hyper_size    ),
-        .cfg_hyper_rwn_o    ( s_cfg_hyper_rwn     ),
-        .cfg_hyper_valid_o  ( s_cfg_hyper_valid   ),
-        .cfg_hyper_ready_i  ( s_cfg_hyper_ready   )
+        .clk_div_enable_i ( s_clkdiv_en     ),
+        .clk_div_data_i   ( s_clkdiv_data   ),
+        .clk_div_valid_i  ( s_clkdiv_valid  ),
+        .clk_div_ack_o    ( s_clkdiv_ack    ),
+
+        .cfg_trans_data_o  ( s_cfg_trans_data  ),
+        .cfg_trans_valid_o ( s_cfg_trans_valid ),
+        .cfg_trans_ready_i ( s_cfg_trans_ready ),
+        .cfg_arg_data_o    ( s_cfg_arg_data  ),
+        .cfg_arg_valid_o   ( s_cfg_arg_valid ),
+        .cfg_arg_ready_i   ( s_cfg_arg_ready )
     );
-    logic [1:0] s_csn;
-    assign hyper_csn0_o = s_csn[0];
-    assign hyper_csn1_o = s_csn[1];
-  hyperbus_phy #(
-    .NR_CS(N_CS),
-    .BURST_WIDTH(BURST_WIDTH)
-  ) i_hyperbus_phy (
-    .clk0                         ( clk0                         ),
-    .clk90                        ( clk90                        ),
-    .rst_ni                       ( rst_ni                       ),
-    .test_en_ti                   ( 1'b0                         ),
-    .config_t_latency_access      ( config_t_latency_access      ),
-    .config_en_latency_additional ( config_en_latency_additional ),
-    .config_t_cs_max              ( config_t_cs_max              ),
-    .config_t_read_write_recovery ( config_t_read_write_recovery ),
-    .config_t_rwds_delay_line     ( config_t_rwds_delay_line     ),
-    .config_t_variable_latency_check ( config_t_variable_latency_check ),
-    .trans_valid_i                ( trans_valid_i                ),
-    .trans_ready_o                ( trans_ready_o                ),
-    .trans_address_i              ( trans_address_i              ),
-    .trans_cs_i                   ( trans_cs_i                   ),
-    .trans_write_i                ( trans_write_i                ),
-    .trans_burst_i                ( trans_burst_i                ),
-    .trans_burst_type_i           ( trans_burst_type_i           ),
-    .trans_address_space_i        ( trans_address_space_i        ),
-    .tx_valid_i                   ( s_hyper_tx_data_valid        ),
-    .tx_ready_o                   ( s_hyper_tx_data_ready        ),
-    .tx_data_i                    ( s_hyper_tx_data              ),
-    .tx_strb_i                    ( 2'b11 ),
-    .rx_valid_o                   ( s_hyper_rx_data_valid        ),
-    .rx_ready_i                   ( s_hyper_rx_data_ready        ),
-    .rx_data_o                    ( s_hyper_rx_data              ),
-    .rx_last_o                    (  ),
-    .rx_error_o                   (  ),
-    .b_valid_o                    (  ),
-    .b_last_o                     (  ),
-    .b_error_o                    (  ),
-    .hyper_cs_no                  ( s_csn                        ),
-    .hyper_ck_o                   ( hyper_clk_o                  ),
-    .hyper_ck_no                  ( hyper_clkn_o                 ),
-    .hyper_rwds_o                 ( hyper_rwds_o                 ),
-    .hyper_rwds_i                 ( hyper_rwds_i                 ),
-    .hyper_rwds_oe_o              ( hyper_rwds_oen_o             ),
-    .hyper_dq_i                   ( hyper_dq_i                   ),
-    .hyper_dq_o                   ( hyper_dq_o                   ),
-    .hyper_dq_oe_o                ( hyper_dq_oen_o               ),
-    .hyper_reset_no               ( hyper_reset_no               ),
-    .debug_hyper_rwds_oe_o        (  ),
-    .debug_hyper_dq_oe_o          (  ),
-    .debug_hyper_phy_state_o      (  )
-  );
+
+    udma_clkgen u_clockgen
+    (
+        .clk_i           ( periph_clk_i    ),
+        .rstn_i          ( rstn_i          ),
+        .dft_test_mode_i ( 1'b0 ),
+        .dft_cg_enable_i ( 1'b0 ),
+        .clock_enable_i  ( s_clkdiv_en     ),
+        .clk_div_data_i  ( s_clkdiv_data   ),
+        .clk_div_valid_i ( s_clkdiv_valid  ),
+        .clk_div_ack_o   ( s_clkdiv_ack    ),
+        .clk_o           ( s_clk_hyper     )
+    );
+
+    hyperbus_clk_gen i_hyper_clk_gen (
+        .clk_i           ( s_clk_hyper     ),
+        .rst_ni          ( rstn_i          ),
+        .dft_test_mode_i ( dft_test_mode_i ),
+        .clk0_o          ( s_clk_hyper_0   ),
+        .clk90_o         ( s_clk_hyper_90  ),
+        .clk180_o        ( s_clk_hyper_180 ),
+        .clk270_o        ( s_clk_hyper_270 )
+    );
+
+    hyperbus_ctrl #(
+        .TRANS_SIZE(TRANS_SIZE)
+    ) i_hyperbus_ctrl (
+        .clk_i           ( s_clk_hyper_0         ),
+        .rst_ni          ( rst_ni                ),
+        .arg_data_i      ( s_arg_data            ),
+        .arg_valid_i     ( s_arg_valid           ),
+        .arg_ready_o     ( s_arg_ready           ),
+        .trans_data_i    ( s_trans_data          ),
+        .trans_valid_i   ( s_trans_valid         ),
+        .trans_ready_o   ( s_trans_ready         ),
+        .tx_fifo_data_i  ( s_hyper_tx_data       ),
+        .tx_fifo_valid_i ( s_hyper_tx_data_valid ),
+        .tx_fifo_ready_o ( s_hyper_tx_data_ready ),
+        .tx_phy_data_o   ( s_phy_tx_data         ),
+        .tx_phy_valid_o  ( s_phy_tx_data_valid   ),
+        .tx_phy_ready_i  ( s_phy_tx_data_ready   ),
+        .rx_fifo_data_o  ( s_hyper_rx_data       ),
+        .rx_fifo_valid_o ( s_hyper_rx_data_valid ),
+        .rx_fifo_ready_i ( s_hyper_rx_data_ready ),
+        .rx_phy_data_i   ( s_phy_rx_data         ),
+        .rx_phy_valid_i  ( s_phy_rx_data_valid   ),
+        .rx_phy_ready_o  ( s_phy_rx_data_ready   )
+    );
+
+    hyperbus_phy #(
+        .NR_CS(N_CS),
+        .BURST_WIDTH(TRANS_SIZE)
+    ) i_hyperbus_phy (
+        .clk0                              ( s_clk_hyper_0                   ),
+        .clk90                             ( s_clk_hyper_90                  ),
+
+        .rst_ni                            ( rstn_i                          ),
+        .test_en_ti                        ( dft_test_mode_i                 ),
+
+        .config_t_latency_access_i         ( s_cfg_latency_access            ),
+        .config_en_latency_additional_i    ( s_cfg_en_latency_additional     ),
+        .config_t_cs_max_i                 ( s_cfg_cs_max                    ),
+        .config_t_read_write_recovery_i    ( s_cfg_read_write_recovery       ),
+        .config_t_rwds_delay_line_i        ( s_cfg_rwds_delay_line           ),
+        .config_t_variable_latency_check_i ( s_cfg_variable_latency_check    ),
+
+        .trans_valid_i                     ( s_phy_trans_valid               ),
+        .trans_ready_o                     ( s_phy_trans_ready               ),
+        .trans_address_i                   ( s_phy_trans_address             ),
+        .trans_cs_i                        ( s_phy_trans_cs                  ),
+        .trans_write_i                     ( s_phy_trans_write               ),
+        .trans_burst_i                     ( s_phy_trans_burst               ),
+        .trans_burst_type_i                ( s_phy_trans_burst_type          ),
+        .trans_address_space_i             ( s_phy_trans_address_space       ),
+
+        .tx_data_i                         ( s_phy_tx_data                   ),
+        .tx_strb_i                         ( s_phy_tx_data_strb              ),
+        .tx_valid_i                        ( s_phy_tx_data_valid             ),
+        .tx_ready_o                        ( s_phy_tx_data_ready             ),
+
+        .rx_valid_o                        ( s_phy_rx_data_valid             ),
+        .rx_ready_i                        ( s_phy_rx_data_ready             ),
+        .rx_data_o                         ( s_phy_rx_data                   ),
+        .rx_last_o                         ( ),
+        .rx_error_o                        ( ),
+        .b_valid_o                         ( ),
+        .b_last_o                          ( ),
+        .b_error_o                         ( ),
+
+        .hyper_cs_no                       ( s_csn                           ),
+        .hyper_ck_o                        ( hyper_clk_o                     ),
+        .hyper_ck_no                       ( hyper_clkn_o                    ),
+        .hyper_rwds_o                      ( hyper_rwds_o                    ),
+        .hyper_rwds_i                      ( hyper_rwds_i                    ),
+        .hyper_rwds_oe_o                   ( hyper_rwds_oen_o                ),
+        .hyper_dq_i                        ( hyper_dq_i                      ),
+        .hyper_dq_o                        ( hyper_dq_o                      ),
+        .hyper_dq_oe_o                     ( hyper_dq_oen_o                  ),
+        .hyper_reset_no                    ( hyper_reset_no                  ),
+        .debug_hyper_rwds_oe_o             ( ),
+        .debug_hyper_dq_oe_o               ( ),
+        .debug_hyper_phy_state_o           ( )
+    );
 
     io_tx_fifo #(
-      .DATA_WIDTH(16),
+      .DATA_WIDTH(32),
       .BUFFER_DEPTH(4)
     ) u_fifo_tx (
         .clk_i      ( sys_clk_i             ),
@@ -363,13 +327,13 @@ module udma_hyperbus
         .req_o      ( data_tx_req_o         ),
         .gnt_i      ( data_tx_gnt_i         ),
         .valid_i    ( data_tx_valid_i       ),
-        .data_i     ( data_tx_i[15:0]       ),
+        .data_i     ( data_tx_i             ),
         .ready_o    ( data_tx_ready_o       )
     );
 
-    udma_dc_fifo #(16,BUFFER_WIDTH) u_dc_tx
+    udma_dc_fifo #(32,BUFFER_WIDTH) u_dc_tx
     (
-        .dst_clk_i          ( s_clk_hyper           ),   
+        .dst_clk_i          ( s_clk_hyper_0         ),   
         .dst_rstn_i         ( rstn_i                ),  
         .dst_data_o         ( s_hyper_tx_data       ),
         .dst_valid_o        ( s_hyper_tx_data_valid ),
@@ -383,30 +347,44 @@ module udma_hyperbus
 
     udma_dc_fifo #(32,BUFFER_WIDTH) u_dc_rx
     (
-        .dst_clk_i          ( sys_clk_i                ),
-        .dst_rstn_i         ( rstn_i               ),
-        .dst_data_o         ( data_rx_o            ),
-        .dst_valid_o        ( data_rx_valid_o      ),
-        .dst_ready_i        ( data_rx_ready_i      ),
-        .src_clk_i          ( s_clk_hyper          ),  
-        .src_rstn_i         ( rstn_i               ),  
+        .dst_clk_i          ( sys_clk_i             ),
+        .dst_rstn_i         ( rstn_i                ),
+        .dst_data_o         ( data_rx_o             ),
+        .dst_valid_o        ( data_rx_valid_o       ),
+        .dst_ready_i        ( data_rx_ready_i       ),
+        .src_clk_i          ( s_clk_hyper_0         ),  
+        .src_rstn_i         ( rstn_i                ),  
         .src_data_i         ( s_hyper_data_rx       ),
         .src_valid_i        ( s_hyper_data_rx_valid ),
         .src_ready_o        ( s_hyper_data_rx_ready )
     );
 
-    udma_dc_fifo #(42,6) u_dc_trans
+    udma_dc_fifo #(TRANS_FIFO_SIZE,6) i_dc_transaction_fifo
     (
-        .src_clk_i          ( sys_clk_i                ),  
-        .src_rstn_i         ( rstn_i               ),  
-        .src_data_i         ( s_trans_sys_data     ),
-        .src_valid_i        ( s_cfg_hyper_valid    ),
-        .src_ready_o        ( s_cfg_hyper_ready    ),
-        .dst_clk_i          ( s_clk_hyper          ),
-        .dst_rstn_i         ( rstn_i               ),
+        .src_clk_i          ( sys_clk_i           ),  
+        .src_rstn_i         ( rstn_i              ),  
+        .src_data_i         ( s_cfg_trans_data    ),
+        .src_valid_i        ( s_cfg_trans_valid   ),
+        .src_ready_o        ( s_cfg_trans_ready   ),
+        .dst_clk_i          ( s_clk_hyper_0       ),
+        .dst_rstn_i         ( rstn_i              ),
         .dst_data_o         ( s_trans_data        ),
-        .dst_valid_o        ( s_trans_valid_fifo  ),
-        .dst_ready_i        ( s_trans_ready_fifo  )
+        .dst_valid_o        ( s_trans_valid       ),
+        .dst_ready_i        ( s_trans_ready       )
+    );
+
+    udma_dc_fifo #(TRANS_ARG_SIZE,6) i_dc_argument_fifo
+    (
+        .src_clk_i          ( sys_clk_i       ),  
+        .src_rstn_i         ( rstn_i          ),  
+        .src_data_i         ( s_cfg_arg_data  ),
+        .src_valid_i        ( s_cfg_arg_valid ),
+        .src_ready_o        ( s_cfg_arg_ready ),
+        .dst_clk_i          ( s_clk_hyper_0   ),
+        .dst_rstn_i         ( rstn_i          ),
+        .dst_data_o         ( s_arg_data      ),
+        .dst_valid_o        ( s_arg_valid     ),
+        .dst_ready_i        ( s_arg_ready     )
     );
 
 endmodule

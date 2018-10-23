@@ -11,6 +11,7 @@
 module hyperbus_clk_gen (
     input  logic clk_i,     // input clock
     input  logic rst_ni,
+    input  logic dft_test_mode_i,
     output logic clk0_o,    // have the input clock - 0deg phase shift
     output logic clk90_o,   // have the input clock - 90deg phase shift
     output logic clk180_o,  // have the input clock - 180deg phase shift
@@ -22,11 +23,6 @@ module hyperbus_clk_gen (
     logic r_clk90_o;
     logic r_clk180_o;
     logic r_clk270_o;
-
-    assign clk0_o = r_clk0_o;
-    assign clk90_o = r_clk90_o;
-    assign clk180_o = r_clk180_o;
-    assign clk270_o = r_clk270_o;
 
     always_ff @(posedge clk_i or negedge rst_ni) begin
         if(~rst_ni) begin
@@ -47,6 +43,39 @@ module hyperbus_clk_gen (
             r_clk270_o <= r_clk180_o;
         end
     end
+
+    pulp_clock_mux2 i_clk0_dft_mux
+    (
+        .clk_o(clk0_o),
+        .clk0_i(r_clk0_o),
+        .clk1_i(clk_i),
+        .clk_sel_i(dft_test_mode_i)
+    );
+
+    pulp_clock_mux2 i_clk90_dft_mux
+    (
+        .clk_o(clk90_o),
+        .clk0_i(r_clk90_o),
+        .clk1_i(clk_i),
+        .clk_sel_i(dft_test_mode_i)
+    );
+
+    pulp_clock_mux2 i_clk180_dft_mux
+    (
+        .clk_o(clk180_o),
+        .clk0_i(r_clk180_o),
+        .clk1_i(clk_i),
+        .clk_sel_i(dft_test_mode_i)
+    );
+
+    pulp_clock_mux2 i_clk270_dft_mux
+    (
+        .clk_o(clk270_o),
+        .clk0_i(r_clk270_o),
+        .clk1_i(clk_i),
+        .clk_sel_i(dft_test_mode_i)
+    );
+
 `else
    assign clk0_o = clk_i;
    assign clk90_o = clk_i;

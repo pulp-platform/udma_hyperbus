@@ -19,7 +19,7 @@ module hyperbus_read_clk_rwds #(
     input  logic                   clk_test,
     input  logic                   test_en_ti,
 
-    input logic [31:0]             config_t_rwds_delay_line,
+    input logic [31:0]             cfg_rwds_delay_line_i,
 
     input logic                    hyper_rwds_i,
     input logic [7:0]              hyper_dq_i,
@@ -39,7 +39,7 @@ module hyperbus_read_clk_rwds #(
     hyperbus_delay_line hyperbus_delay_line_i (
         .in  (hyper_rwds_i),
         .out (hyper_rwds_i_d),
-        .delay(config_t_rwds_delay_line)
+        .delay(cfg_rwds_delay_line_i)
     );
 
     logic cdc_input_fifo_ready;

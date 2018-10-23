@@ -30,7 +30,7 @@ module hyperbus_phy #(
     input  logic  [3:0]            config_t_latency_access_i,
     input  logic [15:0]            config_t_cs_max_i,
     input  logic  [3:0]            config_t_read_write_recovery_i,
-    input  logic [31:0]            config_t_rwds_delay_line_i,
+    input  logic  [2:0]            config_t_rwds_delay_line_i,
     input  logic  [1:0]            config_t_variable_latency_check_i,
 
     // transactions

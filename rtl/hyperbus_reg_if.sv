@@ -45,10 +45,15 @@
 `define REG_MEM_CFG6     5'b10000 //BASEADDR+0x40
 `define REG_MEM_CFG7     5'b10001 //BASEADDR+0x44
 
+`define MODE_NORMAL      3'h0
+`define MODE_REG         3'h1
+`define MODE_2D          3'h2
+
 module hyper_reg_if #(
     parameter L2_AWIDTH_NOAL = 12,
-    parameter FC_AWIDTH_NOAL = 12,
-    parameter TRANS_SIZE     = 16
+    parameter TRANS_SIZE     = 16,
+    parameter MODE_BITS      = 3,
+    parameter TRANS_DATA_SIZE = 32 + TRANS_SIZE + MODE_BITS + 1
 ) (
 	input  logic 	                  clk_i,
 	input  logic   	                  rstn_i,
@@ -80,49 +85,25 @@ module hyper_reg_if #(
     input  logic [L2_AWIDTH_NOAL-1:0] cfg_tx_curr_addr_i,
     input  logic     [TRANS_SIZE-1:0] cfg_tx_bytes_left_i,
 
-    output logic                [1:0] cfg_wrap_size0_o,
-    output logic                [1:0] cfg_wrap_size1_o,
-    output logic                [7:0] cfg_mbr0_o,
-    output logic                [7:0] cfg_mbr1_o,
-    output logic                [3:0] cfg_latency0_o,
-    output logic                [3:0] cfg_latency1_o,
-    output logic                [3:0] cfg_rd_cshi0_o,
-    output logic                [3:0] cfg_rd_cshi1_o,
-    output logic                [3:0] cfg_rd_css0_o,
-    output logic                [3:0] cfg_rd_css1_o,
-    output logic                [3:0] cfg_rd_csh0_o,
-    output logic                [3:0] cfg_rd_csh1_o,
-    output logic                [3:0] cfg_wr_cshi0_o,
-    output logic                [3:0] cfg_wr_cshi1_o,
-    output logic                [3:0] cfg_wr_css0_o,
-    output logic                [3:0] cfg_wr_css1_o,
-    output logic                [3:0] cfg_wr_csh0_o,
-    output logic                [3:0] cfg_wr_csh1_o,
-    output logic                [8:0] cfg_rd_max_length0_o,
-    output logic                [8:0] cfg_rd_max_length1_o,
-    output logic                [8:0] cfg_wr_max_length0_o,
-    output logic                [8:0] cfg_wr_max_length1_o,
-    output logic                [2:0] cfg_rds_delay_adj_o,
+    output logic                      cfg_en_latency_additional_o,
+    output logic                [3:0] cfg_latency_access_o,
+    output logic               [15:0] cfg_cs_max_o,
+    output logic                [3:0] cfg_read_write_recovery_o,
+    output logic                [2:0] cfg_rwds_delay_line_o,
+    output logic                [1:0] cfg_variable_latency_check_o,
 
-    output logic                      cfg_acs0_o,
-    output logic                      cfg_tco0_o,
-    output logic                      cfg_dt0_o,
-    output logic                      cfg_crt0_o,
-    output logic                      cfg_rd_max_len_en0_o,
-    output logic                      cfg_wr_max_len_en0_o,
+    output logic                      clk_div_enable_o,
+    output logic                      clk_div_data_o,
+    output logic                      clk_div_valid_o,
+    input  logic                      clk_div_ack_i,
 
-    output logic                      cfg_acs1_o,
-    output logic                      cfg_tco1_o,
-    output logic                      cfg_dt1_o,
-    output logic                      cfg_crt1_o,
-    output logic                      cfg_rd_max_len_en1_o,
-    output logic                      cfg_wr_max_len_en1_o,
+    output logic [TRANS_DATA_SIZE-1:0] cfg_trans_data_o,
+    output logic                       cfg_trans_valid_o,
+    input  logic                       cfg_trans_ready_i,
 
-    output logic               [31:0] cfg_hyper_addr_o,
-    output logic                [8:0] cfg_hyper_size_o,
-    output logic                      cfg_hyper_rwn_o,
-    output logic                      cfg_hyper_valid_o,
-    input  logic                      cfg_hyper_ready_i
+    output logic                [31:0] cfg_arg_data_o,
+    output logic                       cfg_arg_valid_o,
+    input  logic                       cfg_arg_ready_i
 
 );
 
@@ -138,48 +119,23 @@ module hyper_reg_if #(
     logic                      r_tx_en;
     logic                      r_tx_clr;
 
+    logic   [TRANS_SIZE-1 : 0] s_trans_size;
+
     logic                [4:0] s_wr_addr;
     logic                [4:0] s_rd_addr;
 
     logic               [31:0] r_startaddr;
+    logic      [MODE_BITS-1:0] r_mode;
 
-    logic                [1:0] r_wrap_size0;
-    logic                [1:0] r_wrap_size1;
-    logic                [7:0] r_mbr0;
-    logic                [7:0] r_mbr1;
-    logic                [3:0] r_latency0;
-    logic                [3:0] r_latency1;
-    logic                [3:0] r_rd_cshi0;
-    logic                [3:0] r_rd_cshi1;
-    logic                [3:0] r_rd_css0;
-    logic                [3:0] r_rd_css1;
-    logic                [3:0] r_rd_csh0;
-    logic                [3:0] r_rd_csh1;
-    logic                [3:0] r_wr_cshi0;
-    logic                [3:0] r_wr_cshi1;
-    logic                [3:0] r_wr_css0;
-    logic                [3:0] r_wr_css1;
-    logic                [3:0] r_wr_csh0;
-    logic                [3:0] r_wr_csh1;
-    logic                [8:0] r_rd_max_length0;
-    logic                [8:0] r_rd_max_length1;
-    logic                [8:0] r_wr_max_length0;
-    logic                [8:0] r_wr_max_length1;
+    logic                      r_en_latency_additional;
+    logic                [3:0] r_latency_access;
+    logic               [15:0] r_cs_max;
+    logic                [3:0] r_read_write_recovery;
+    logic                [2:0] r_rwds_delay_line;
+    logic                [1:0] r_variable_latency_check;
 
-    logic                [2:0] r_rds_delay_adj;
+    logic               [15:0] r_reg_val;
 
-    logic                      r_acs0;
-    logic                      r_acs1;
-    logic                      r_tco0;
-    logic                      r_tco1;
-    logic                      r_dt0;
-    logic                      r_dt1;
-    logic                      r_crt0;
-    logic                      r_crt1;
-    logic                      r_rd_max_len_en0;
-    logic                      r_rd_max_len_en1;
-    logic                      r_wr_max_len_en0;
-    logic                      r_wr_max_len_en1;
 
     assign s_wr_addr = (cfg_valid_i & ~cfg_rwn_i) ? cfg_addr_i : 5'h0;
     assign s_rd_addr = (cfg_valid_i &  cfg_rwn_i) ? cfg_addr_i : 5'h0;
@@ -196,46 +152,39 @@ module hyper_reg_if #(
     assign cfg_tx_en_o         = r_tx_en;
     assign cfg_tx_clr_o        = r_tx_clr;
 
-    assign cfg_hyper_addr_o    = r_startaddr;
-    assign cfg_hyper_valid_o   = r_tx_en | r_rx_en;
-    assign cfg_hyper_rwn_o     = r_rx_en;
-    assign cfg_hyper_size_o    = r_rx_en ? r_rx_size[9:1] : r_tx_size[9:1];
+    assign cfg_trans_data_o    = {r_startaddr,s_trans_size,r_rx_en,r_mode};
+    assign cfg_trans_valid_o   = r_tx_en | r_rx_en;
 
-    assign cfg_mbr0_o           = r_mbr0;                
-    assign cfg_latency0_o       = r_latency0;        
-    assign cfg_wrap_size0_o     = r_wrap_size0;    
-    assign cfg_rd_cshi0_o       = r_rd_cshi0;        
-    assign cfg_rd_css0_o        = r_rd_css0;          
-    assign cfg_rd_csh0_o        = r_rd_csh0;          
-    assign cfg_wr_cshi0_o       = r_wr_cshi0;        
-    assign cfg_wr_css0_o        = r_wr_css0;          
-    assign cfg_wr_csh0_o        = r_wr_csh0;          
-    assign cfg_rd_max_length0_o = r_rd_max_length0;
-    assign cfg_wr_max_length0_o = r_wr_max_length0;
-    assign cfg_acs0_o           = r_acs0;                    
-    assign cfg_tco0_o           = r_tco0;                    
-    assign cfg_dt0_o            = r_dt0;                      
-    assign cfg_crt0_o           = r_crt0;                    
-    assign cfg_rd_max_len_en0_o = r_rd_max_len_en0;
-    assign cfg_wr_max_len_en0_o = r_wr_max_len_en0;
-    assign cfg_mbr1_o           = r_mbr1;                
-    assign cfg_latency1_o       = r_latency1;        
-    assign cfg_wrap_size1_o     = r_wrap_size1;    
-    assign cfg_rd_cshi1_o       = r_rd_cshi1;        
-    assign cfg_rd_css1_o        = r_rd_css1;          
-    assign cfg_rd_csh1_o        = r_rd_csh1;          
-    assign cfg_wr_cshi1_o       = r_wr_cshi1;        
-    assign cfg_wr_css1_o        = r_wr_css1;          
-    assign cfg_wr_csh1_o        = r_wr_csh1;          
-    assign cfg_rd_max_length1_o = r_rd_max_length1;
-    assign cfg_wr_max_length1_o = r_wr_max_length1;
-    assign cfg_acs1_o           = r_acs1;                    
-    assign cfg_tco1_o           = r_tco1;                    
-    assign cfg_dt1_o            = r_dt1;                      
-    assign cfg_crt1_o           = r_crt1;                    
-    assign cfg_rd_max_len_en1_o = r_rd_max_len_en1;
-    assign cfg_wr_max_len_en1_o = r_wr_max_len_en1;
-    assign cfg_rds_delay_adj_o  = r_rds_delay_adj;
+    assign cfg_arg_valid_o     = r_tx_reg | r_rx_reg;
+
+    assign s_trans_size        = r_rx_en ? r_rx_size : r_tx_size;
+
+    assign cfg_en_latency_additional_o  = r_en_latency_additional;
+    assign cfg_latency_access_o         = r_latency_access;
+    assign cfg_cs_max_o                 = r_cs_max;
+    assign cfg_read_write_recovery_o    = r_read_write_recovery;
+    assign cfg_rwds_delay_line_o        = r_rwds_delay_line;
+    assign cfg_variable_latency_check_o = r_variable_latency_check;
+
+    edge_propagator_tx i_edgeprop_soc 
+    (
+      .clk_i(clk_i),
+      .rstn_i(rstn_i),
+      .valid_i(r_clk_div_valid),
+      .ack_i(clk_div_ack_i),
+      .valid_o(clk_div_data_o)
+    );
+
+    always_comb 
+    begin
+        cfg_arg_data_o = 'h0;
+        case(r_mode)
+            MODE_2D:
+                cfg_arg_data_o = r_stride;
+            MODE_REG:
+                cfg_arg_data_o = {16'h0,r_reg_val};
+        endcase
+    end
 
     always_ff @(posedge clk_i, negedge rstn_i) 
     begin
@@ -253,41 +202,16 @@ module hyper_reg_if #(
             r_tx_en          =  'h0;
             r_tx_clr         =  'h0;
             r_startaddr     <=  'h0;
-            r_wrap_size0     <= 'h3;
-            r_wrap_size1     <= 'h3;
-            r_mbr0           <= 'h0;
-            r_mbr1           <= 'h1;
-            r_latency0       <= 'h7;
-            r_latency1       <= 'h0;
-            r_rd_cshi0       <= 'h8;
-            r_rd_cshi1       <= 'h8;
-            r_rd_css0        <= 'h8;
-            r_rd_css1        <= 'h8;
-            r_rd_csh0        <= 'h8;
-            r_rd_csh1        <= 'h8;
-            r_wr_cshi0       <= 'h8;
-            r_wr_cshi1       <= 'h8;
-            r_wr_css0        <= 'h8;
-            r_wr_css1        <= 'h8;
-            r_wr_csh0        <= 'h8;
-            r_wr_csh1        <= 'h8;
-            r_rd_max_length0 <= 'h0;
-            r_rd_max_length1 <= 'h0;
-            r_wr_max_length0 <= 'h0;
-            r_wr_max_length1 <= 'h0;
-            r_acs0           <= 'h0;
-            r_acs1           <= 'h0;
-            r_tco0           <= 'h0;
-            r_tco1           <= 'h0;
-            r_dt0            <= 'h1;
-            r_dt1            <= 'h1;
-            r_crt0           <= 'h0;
-            r_crt1           <= 'h0;
-            r_rd_max_len_en0 <= 'h0;
-            r_rd_max_len_en1 <= 'h0;
-            r_wr_max_len_en0 <= 'h0;
-            r_wr_max_len_en1 <= 'h0;
-            r_rds_delay_adj  <= 'h0;
+            r_mode          <=  'h0;
+            r_rx_reg         =  'h0;
+            r_tx_reg         =  'h0;
+            r_reg_val       <=  'h0;
+            r_en_latency_additional  <= 'h0;
+            r_latency_access         <= 'h0;
+            r_cs_max                 <= 'h0;
+            r_read_write_recovery    <= 'h0;
+            r_rwds_delay_line        <= 'h0;
+            r_variable_latency_check <= 'h0;
         end
         else
         begin
@@ -295,68 +219,20 @@ module hyper_reg_if #(
             r_rx_clr         =  'h0;
             r_tx_en          =  'h0;
             r_tx_clr         =  'h0;
+            r_rx_reg         =  'h0;
+            r_tx_reg         =  'h0;
 
             if (cfg_valid_i & ~cfg_rwn_i)
             begin
                 case (s_wr_addr)
                 `REG_MEM_CFG0:
                 begin
-                    r_mbr0       <= cfg_data_i[7:0];
-                    r_latency0   <= cfg_data_i[11:8];
-                    r_wrap_size0 <= cfg_data_i[13:12];
-                end
-                `REG_MEM_CFG1:
-                begin
-                    r_rd_cshi0   <= cfg_data_i[3:0];
-                    r_rd_css0    <= cfg_data_i[7:4];
-                    r_rd_csh0    <= cfg_data_i[11:8];
-                    r_wr_cshi0   <= cfg_data_i[15:12];
-                    r_wr_css0    <= cfg_data_i[19:16];
-                    r_wr_csh0    <= cfg_data_i[23:20];
-                end
-                `REG_MEM_CFG2:
-                begin
-                    r_rd_max_length0 <= cfg_data_i[8:0];
-                    r_wr_max_length0 <= cfg_data_i[24:16];
-                end
-                `REG_MEM_CFG3:
-                begin
-                    r_acs0           <= cfg_data_i[0];
-                    r_tco0           <= cfg_data_i[1];
-                    r_dt0            <= cfg_data_i[2];
-                    r_crt0           <= cfg_data_i[3];
-                    r_rd_max_len_en0 <= cfg_data_i[4];
-                    r_wr_max_len_en0 <= cfg_data_i[5];
-                    r_rds_delay_adj  <= cfg_data_i[10:8];
-                end
-                `REG_MEM_CFG4:
-                begin
-                    r_mbr1       <= cfg_data_i[7:0];
-                    r_latency1   <= cfg_data_i[11:8];
-                    r_wrap_size1 <= cfg_data_i[13:12];
-                end
-                `REG_MEM_CFG5:
-                begin
-                    r_rd_cshi1   <= cfg_data_i[3:0];
-                    r_rd_css1    <= cfg_data_i[7:4];
-                    r_rd_csh1    <= cfg_data_i[11:8];
-                    r_wr_cshi1   <= cfg_data_i[15:12];
-                    r_wr_css1    <= cfg_data_i[19:16];
-                    r_wr_csh1    <= cfg_data_i[23:20];
-                end
-                `REG_MEM_CFG6:
-                begin
-                    r_rd_max_length1 <= cfg_data_i[8:0];
-                    r_wr_max_length1 <= cfg_data_i[24:16];
-                end
-                `REG_MEM_CFG7:
-                begin
-                    r_acs1           <= cfg_data_i[0];
-                    r_tco1           <= cfg_data_i[1];
-                    r_dt1            <= cfg_data_i[2];
-                    r_crt1           <= cfg_data_i[3];
-                    r_rd_max_len_en1 <= cfg_data_i[4];
-                    r_wr_max_len_en1 <= cfg_data_i[5];
+                    r_latency_access         <= cfg_data_i[3:0];
+                    r_read_write_recovery    <= cfg_data_i[7:4];
+                    r_rwds_delay_line        <= cfg_data_i[10:8];
+                    r_variable_latency_check <= cfg_data_i[12:11];
+                    r_en_latency_additional  <= cfg_data_i[13];
+                    r_cs_max                 <= cfg_data_i[31:16];
                 end
                 `REG_RX_SADDR:
                     r_rx_startaddr   <= cfg_data_i[L2_AWIDTH_NOAL-1:0];
@@ -380,6 +256,16 @@ module hyper_reg_if #(
                 end
                 `REG_EXT_ADDR:
                     r_startaddr      <= cfg_data_i;
+                `REG_EXT_CFG:
+                begin
+                    r_mode           <= cfg_data_i[MODE_BITS-1:0];
+                end
+                `REG_HYP_REG:
+                begin
+                    r_rx_reg          =  cfg_data_i[16];
+                    r_tx_reg          = ~cfg_data_i[16];
+                    r_reg_val        <=  cfg_data_i[15:0];
+                end
 
                 endcase
             end
@@ -405,21 +291,15 @@ module hyper_reg_if #(
         `REG_EXT_ADDR:
             cfg_data_o = r_startaddr;
         `REG_MEM_CFG0:
-            cfg_data_o = {19'h0,r_wrap_size0,r_latency0,r_mbr0};
-        `REG_MEM_CFG1:
-            cfg_data_o = {8'h0,r_wr_csh0,r_wr_css0,r_wr_cshi0,r_rd_csh0,r_rd_css0,r_rd_cshi0};
-        `REG_MEM_CFG2:
-            cfg_data_o = {7'h0,r_wr_max_length0,7'h0,r_rd_max_length0};
-        `REG_MEM_CFG3:
-            cfg_data_o = {26'h0,r_wr_max_len_en0,r_rd_max_len_en0,r_crt0,r_dt0,r_tco0,r_acs0};
-        `REG_MEM_CFG4:
-            cfg_data_o = {19'h0,r_wrap_size1,r_latency1,r_mbr1};
-        `REG_MEM_CFG5:
-            cfg_data_o = {8'h0,r_wr_csh1,r_wr_css1,r_wr_cshi1,r_rd_csh1,r_rd_css1,r_rd_cshi1};
-        `REG_MEM_CFG6:
-            cfg_data_o = {7'h0,r_wr_max_length1,7'h0,r_rd_max_length1};
-        `REG_MEM_CFG7:
-            cfg_data_o = {26'h0,r_wr_max_len_en1,r_rd_max_len_en1,r_crt1,r_dt1,r_tco1,r_acs1};
+            cfg_data_o = { 
+                            r_cs_max,                   //bits[31:16]
+                            2'h0,                       //bits[15:14]
+                            r_en_latency_additional,    //bits[13]
+                            r_variable_latency_check,   //bits[12:11]
+                            r_rwds_delay_line,          //bits[10:8]
+                            r_read_write_recovery,      //bits[7:4]
+                            r_latency_access            //bits[3:0]
+                        };
         default:
             cfg_data_o = 'h0;
         endcase
