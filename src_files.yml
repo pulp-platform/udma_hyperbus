@@ -9,6 +9,7 @@ udma_hyperbus:
     rtl/hyperbus_read_clk_rwds.sv,
     rtl/hyperbus_reg_if.sv,
     rtl/hyperbus_delay_line.sv,
+    rtl/hyperbus_clock_diff_out.sv,
     rtl/udma_hyperbus.sv,
   ]
 
