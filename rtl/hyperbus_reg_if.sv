@@ -52,8 +52,7 @@
 module hyper_reg_if #(
     parameter L2_AWIDTH_NOAL = 12,
     parameter TRANS_SIZE     = 16,
-    parameter MODE_BITS      = 3,
-    parameter TRANS_DATA_SIZE = 32 + TRANS_SIZE + MODE_BITS + 1
+    parameter TRANS_DATA_SIZE = 32 + TRANS_SIZE + 4 + 1
 ) (
 	input  logic 	                  clk_i,
 	input  logic   	                  rstn_i,
@@ -125,7 +124,7 @@ module hyper_reg_if #(
     logic                [4:0] s_rd_addr;
 
     logic               [31:0] r_startaddr;
-    logic      [MODE_BITS-1:0] r_mode;
+    logic                [3:0] r_mode;
 
     logic                      r_en_latency_additional;
     logic                [3:0] r_latency_access;
@@ -178,7 +177,7 @@ module hyper_reg_if #(
     always_comb 
     begin
         cfg_arg_data_o = 'h0;
-        case(r_mode)
+        case(r_mode[2:0])
             MODE_2D:
                 cfg_arg_data_o = r_stride;
             MODE_REG:
@@ -258,7 +257,7 @@ module hyper_reg_if #(
                     r_startaddr      <= cfg_data_i;
                 `REG_EXT_CFG:
                 begin
-                    r_mode           <= cfg_data_i[MODE_BITS-1:0];
+                    r_mode           <= cfg_data_i[3:0];
                 end
                 `REG_HYP_REG:
                 begin
