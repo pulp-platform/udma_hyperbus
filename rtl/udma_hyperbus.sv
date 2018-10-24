@@ -24,7 +24,7 @@
 
 `define log2(VALUE) ((VALUE) < ( 1 ) ? 0 : (VALUE) < ( 2 ) ? 1 : (VALUE) < ( 4 ) ? 2 : (VALUE) < ( 8 ) ? 3 : (VALUE) < ( 16 )  ? 4 : (VALUE) < ( 32 )  ? 5 : (VALUE) < ( 64 )  ? 6 : (VALUE) < ( 128 ) ? 7 : (VALUE) < ( 256 ) ? 8 : (VALUE) < ( 512 ) ? 9 : (VALUE) < ( 1024 ) ? 10 : (VALUE) < ( 2048 ) ? 11 : (VALUE) < ( 4096 ) ? 12 : (VALUE) < ( 8192 ) ? 13 : (VALUE) < ( 16384 ) ? 14 : (VALUE) < ( 32768 ) ? 15 : (VALUE) < ( 65536 ) ? 16 : (VALUE) < ( 131072 ) ? 17 : (VALUE) < ( 262144 ) ? 18 : (VALUE) < ( 524288 ) ? 19 : (VALUE) < ( 1048576 ) ? 20 : (VALUE) < ( 1048576 * 2 ) ? 21 : (VALUE) < ( 1048576 * 4 ) ? 22 : (VALUE) < ( 1048576 * 8 ) ? 23 : (VALUE) < ( 1048576 * 16 ) ? 24 : 25)
 
-module udma_hyperbus
+module udma_hyperbus_top
 #(
     parameter L2_AWIDTH_NOAL = 12,
     parameter TRANS_SIZE     = 16
@@ -92,6 +92,7 @@ module udma_hyperbus
     localparam BUFFER_WIDTH=8;
     localparam MODE_BITS = 3;
     localparam TRANS_FIFO_SIZE = 32 + TRANS_SIZE + MODE_BITS + 1;  
+    localparam TRANS_ARG_SIZE = 2*TRANS_SIZE;
 
     logic                [31:0] s_udma_rx_data;
     logic                       s_udma_rx_data_valid;
@@ -120,11 +121,11 @@ module udma_hyperbus
     logic                       s_clk_hyper;
 
 
-    logic   [TRANS_FIFO_SIZE-1] s_cfg_trans_data;
+    logic   [TRANS_FIFO_SIZE-1:0] s_cfg_trans_data;
     logic                       s_cfg_trans_valid;
     logic                       s_cfg_trans_ready;
 
-    logic    [TRANS_ARG_SIZE-1] s_cfg_arg_data;
+    logic    [TRANS_ARG_SIZE-1:0] s_cfg_arg_data;
     logic                       s_cfg_arg_valid;
     logic                       s_cfg_arg_ready;
 
@@ -268,7 +269,7 @@ module udma_hyperbus
     );
 
     hyperbus_phy #(
-        .NR_CS(N_CS),
+        .NR_CS(4),
         .BURST_WIDTH(TRANS_SIZE)
     ) i_hyperbus_phy (
         .clk0                              ( s_clk_hyper_0                   ),

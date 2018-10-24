@@ -37,9 +37,9 @@
 `define REG_EXT_CFG      5'b01001 //BASEADDR+0x24
 
 `define REG_MEM_CFG0     5'b01010 //BASEADDR+0x28
-`define REG_MEM_CFG1     5'b01011 //BASEADDR+0x2C
-`define REG_MEM_CFG2     5'b01100 //BASEADDR+0x30
-`define REG_MEM_CFG3     5'b01101 //BASEADDR+0x34
+`define REG_HYP_REG      5'b01011 //BASEADDR+0x2C
+`define REG_HYP_STRIDE   5'b01100 //BASEADDR+0x30
+`define REG_HYP_LINE     5'b01101 //BASEADDR+0x34
 `define REG_MEM_CFG4     5'b01110 //BASEADDR+0x38
 `define REG_MEM_CFG5     5'b01111 //BASEADDR+0x3C
 `define REG_MEM_CFG6     5'b10000 //BASEADDR+0x40
@@ -118,6 +118,12 @@ module hyper_reg_if #(
     logic                      r_tx_en;
     logic                      r_tx_clr;
 
+    logic                      r_tx_reg;
+    logic                      r_rx_reg;
+
+    logic   [TRANS_SIZE-1 : 0] r_stride;
+    logic   [TRANS_SIZE-1 : 0] r_line;
+
     logic   [TRANS_SIZE-1 : 0] s_trans_size;
 
     logic                [4:0] s_wr_addr;
@@ -178,9 +184,9 @@ module hyper_reg_if #(
     begin
         cfg_arg_data_o = 'h0;
         case(r_mode[2:0])
-            MODE_2D:
+            `MODE_2D:
                 cfg_arg_data_o = r_stride;
-            MODE_REG:
+            `MODE_REG:
                 cfg_arg_data_o = {16'h0,r_reg_val};
         endcase
     end
@@ -211,6 +217,8 @@ module hyper_reg_if #(
             r_read_write_recovery    <= 'h0;
             r_rwds_delay_line        <= 'h0;
             r_variable_latency_check <= 'h0;
+            r_stride        <= 'h0;
+            r_line          <= 'h0;
         end
         else
         begin
@@ -265,7 +273,14 @@ module hyper_reg_if #(
                     r_tx_reg          = ~cfg_data_i[16];
                     r_reg_val        <=  cfg_data_i[15:0];
                 end
-
+                `REG_HYP_STRIDE:
+                begin
+                    r_stride         <=  cfg_data_i[TRANS_SIZE-1:0];
+                end
+                `REG_HYP_LINE:
+                begin
+                    r_line           <=  cfg_data_i[TRANS_SIZE-1:0];
+                end
                 endcase
             end
         end

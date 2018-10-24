@@ -57,6 +57,7 @@ module hyperbus_ctrl #(
     logic           [31:0] s_trans_phy_addr;
 
     logic           [15:0] r_trans_data;
+    logic           [15:0] s_trans_data;
     logic            [1:0] r_byte_cnt;
     logic            [1:0] s_byte_cnt;
 
