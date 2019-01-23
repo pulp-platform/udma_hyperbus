@@ -192,7 +192,7 @@ module hyperbus_phy #(
         .rst_ni                   ( rst_ni                        ),
         .clk_test                 ( clk_test                      ),
         .test_en_ti               ( test_en_ti                    ),
-        .config_t_rwds_delay_line_i ( config_t_rwds_delay_line_i  ),
+        .cfg_rwds_delay_line_i    ( config_t_rwds_delay_line_i    ),
         .hyper_rwds_i             ( hyper_rwds_i                  ),
         .hyper_dq_i               ( hyper_dq_i                    ),
         .read_clk_en_i            ( r_read_clk_en                 ),

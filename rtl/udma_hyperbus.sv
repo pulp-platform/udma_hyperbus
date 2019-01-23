@@ -14,17 +14,15 @@
 // Additional contributions by:                                               //
 //                                                                            //
 //                                                                            //
-// Design Name:    hyper Master Top Level file                                  //
-// Project Name:   hyper Master                                                 //
+// Design Name:    hyper Master Top Level file                                //
+// Project Name:   hyper Master                                               //
 // Language:       SystemVerilog                                              //
 //                                                                            //
-// Description:    hyper Master with full QPI support                           //
+// Description:    hyper Master with octoSPI support                          //
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-`define log2(VALUE) ((VALUE) < ( 1 ) ? 0 : (VALUE) < ( 2 ) ? 1 : (VALUE) < ( 4 ) ? 2 : (VALUE) < ( 8 ) ? 3 : (VALUE) < ( 16 )  ? 4 : (VALUE) < ( 32 )  ? 5 : (VALUE) < ( 64 )  ? 6 : (VALUE) < ( 128 ) ? 7 : (VALUE) < ( 256 ) ? 8 : (VALUE) < ( 512 ) ? 9 : (VALUE) < ( 1024 ) ? 10 : (VALUE) < ( 2048 ) ? 11 : (VALUE) < ( 4096 ) ? 12 : (VALUE) < ( 8192 ) ? 13 : (VALUE) < ( 16384 ) ? 14 : (VALUE) < ( 32768 ) ? 15 : (VALUE) < ( 65536 ) ? 16 : (VALUE) < ( 131072 ) ? 17 : (VALUE) < ( 262144 ) ? 18 : (VALUE) < ( 524288 ) ? 19 : (VALUE) < ( 1048576 ) ? 20 : (VALUE) < ( 1048576 * 2 ) ? 21 : (VALUE) < ( 1048576 * 4 ) ? 22 : (VALUE) < ( 1048576 * 8 ) ? 23 : (VALUE) < ( 1048576 * 16 ) ? 24 : 25)
-
-module udma_hyperbus_top
+module udma_hyper_top
 #(
     parameter L2_AWIDTH_NOAL = 12,
     parameter TRANS_SIZE     = 16
@@ -70,7 +68,7 @@ module udma_hyperbus_top
     input  logic               [31:0] data_tx_i,
     input  logic                      data_tx_valid_i,
     output logic                      data_tx_ready_o,
-             
+
     output logic                [1:0] data_rx_datasize_o,
     output logic               [31:0] data_rx_o,
     output logic                      data_rx_valid_o,
@@ -89,18 +87,14 @@ module udma_hyperbus_top
 
 );
 
-    localparam BUFFER_WIDTH=8;
-    localparam MODE_BITS = 3;
-    localparam TRANS_FIFO_SIZE = 32 + TRANS_SIZE + MODE_BITS + 1;  
-    localparam TRANS_ARG_SIZE = 2*TRANS_SIZE;
+    localparam BUFFER_WIDTH    = 8;
+    localparam MODE_BITS       = 3;
+    localparam TRANS_FIFO_SIZE = 32 + TRANS_SIZE + MODE_BITS + 1;
+    localparam TRANS_ARG_SIZE  = TRANS_SIZE;
 
-    logic                [31:0] s_udma_rx_data;
-    logic                       s_udma_rx_data_valid;
-    logic                       s_udma_rx_data_ready;
-
-    logic                [31:0] s_udma_tx_data;
-    logic                       s_udma_tx_data_valid;
-    logic                       s_udma_tx_data_ready;
+    logic                [31:0] s_udma_data_tx;
+    logic                       s_udma_data_tx_valid;
+    logic                       s_udma_data_tx_ready;
 
     logic                [31:0] s_hyper_tx_data;
     logic                       s_hyper_tx_data_valid;
@@ -111,6 +105,7 @@ module udma_hyperbus_top
     logic                       s_hyper_rx_data_ready;
 
     logic                [15:0] s_phy_tx_data;
+    logic                [1:0]  s_phy_tx_data_strb;
     logic                       s_phy_tx_data_valid;
     logic                       s_phy_tx_data_ready;
 
@@ -121,31 +116,35 @@ module udma_hyperbus_top
     logic                       s_clk_hyper;
 
 
-    logic   [TRANS_FIFO_SIZE-1:0] s_cfg_trans_data;
+    logic [TRANS_FIFO_SIZE-1:0] s_cfg_trans_data;
     logic                       s_cfg_trans_valid;
     logic                       s_cfg_trans_ready;
 
-    logic    [TRANS_ARG_SIZE-1:0] s_cfg_arg_data;
+    logic  [TRANS_ARG_SIZE-1:0] s_cfg_arg_data;
     logic                       s_cfg_arg_valid;
     logic                       s_cfg_arg_ready;
 
+    logic  [TRANS_ARG_SIZE-1:0] s_arg_data;
+    logic                       s_arg_valid;
+    logic                       s_arg_ready;
 
-    logic                       s_trans_hyper_valid;
-    logic                       s_trans_hyper_ready;
-    logic      [TRANS_SIZE-1:0] s_trans_hyper_len;
-    logic                 [1:0] s_trans_hyper_burst;
-    logic                [31:0] s_trans_hyper_addr;
-    logic [TRANS_FIFO_SIZE-1:0] s_trans_hyper_data;
 
-    logic                       s_trans_phy_valid;
-    logic                       s_trans_phy_ready;
-    logic                [31:0] s_trans_phy_address;
-    logic                 [1:0] s_trans_phy_cs;
-    logic                       s_trans_phy_write;
-    logic      [TRANS_SIZE-1:0] s_trans_phy_burst;
-    logic                 [1:0] s_trans_phy_burst_type;
-    logic                       s_trans_phy_address_space;
- 
+    logic                       s_trans_valid;
+    logic                       s_trans_ready;
+    logic      [TRANS_SIZE-1:0] s_trans_len;
+    logic                 [1:0] s_trans_burst;
+    logic                [31:0] s_trans_addr;
+    logic [TRANS_FIFO_SIZE-1:0] s_trans_data;
+
+    logic                       s_phy_trans_valid;
+    logic                       s_phy_trans_ready;
+    logic                [31:0] s_phy_trans_address;
+    logic                 [1:0] s_phy_trans_cs;
+    logic                       s_phy_trans_write;
+    logic      [TRANS_SIZE-1:0] s_phy_trans_burst;
+    logic                       s_phy_trans_burst_type;
+    logic                       s_phy_trans_address_space;
+
     logic                       s_cfg_en_latency_additional;
     logic                 [3:0] s_cfg_latency_access;
     logic                [15:0] s_cfg_cs_max;
@@ -153,6 +152,12 @@ module udma_hyperbus_top
     logic                 [2:0] s_cfg_rwds_delay_line;
     logic                 [1:0] s_cfg_variable_latency_check;
 
+    logic                 [7:0] s_clkdiv_data;
+    logic                       s_clkdiv_valid;
+    logic                       s_clkdiv_ack;
+
+    assign data_tx_datasize_o = 2'b10;
+    assign data_rx_datasize_o = 2'b10;
 
     logic [1:0] s_csn;
     assign hyper_csn0_o = s_csn[0];
@@ -199,7 +204,6 @@ module udma_hyperbus_top
         .cfg_rwds_delay_line_o        ( s_cfg_rwds_delay_line           ),
         .cfg_variable_latency_check_o ( s_cfg_variable_latency_check    ),
 
-        .clk_div_enable_o ( s_clkdiv_en     ),
         .clk_div_data_o   ( s_clkdiv_data   ),
         .clk_div_valid_o  ( s_clkdiv_valid  ),
         .clk_div_ack_i    ( s_clkdiv_ack    ),
@@ -218,7 +222,7 @@ module udma_hyperbus_top
         .rstn_i          ( rstn_i          ),
         .dft_test_mode_i ( 1'b0 ),
         .dft_cg_enable_i ( 1'b0 ),
-        .clock_enable_i  ( s_clkdiv_en     ),
+        .clock_enable_i  ( 1'b1 ),
         .clk_div_data_i  ( s_clkdiv_data   ),
         .clk_div_valid_i ( s_clkdiv_valid  ),
         .clk_div_ack_o   ( s_clkdiv_ack    ),
@@ -231,11 +235,12 @@ module udma_hyperbus_top
         .dft_test_mode_i ( dft_test_mode_i ),
         .clk0_o          ( s_clk_hyper_0   ),
         .clk90_o         ( s_clk_hyper_90  ),
-        .clk180_o        ( s_clk_hyper_180 ),
-        .clk270_o        ( s_clk_hyper_270 )
+        .clk180_o        (  ),
+        .clk270_o        (  )
     );
 
     hyperbus_ctrl #(
+        .TRANS_DATA_SIZE(TRANS_FIFO_SIZE),
         .TRANS_SIZE(TRANS_SIZE)
     ) i_hyperbus_ctrl (
         .clk_i                    ( s_clk_hyper_0             ),
@@ -243,39 +248,48 @@ module udma_hyperbus_top
         .arg_data_i               ( s_arg_data                ),
         .arg_valid_i              ( s_arg_valid               ),
         .arg_ready_o              ( s_arg_ready               ),
+
         .trans_data_i             ( s_trans_data              ),
         .trans_valid_i            ( s_trans_valid             ),
         .trans_ready_o            ( s_trans_ready             ),
+
         .tx_fifo_data_i           ( s_hyper_tx_data           ),
         .tx_fifo_valid_i          ( s_hyper_tx_data_valid     ),
         .tx_fifo_ready_o          ( s_hyper_tx_data_ready     ),
+
         .tx_phy_data_o            ( s_phy_tx_data             ),
+        .tx_phy_strb_o            ( s_phy_tx_data_strb        ),
         .tx_phy_valid_o           ( s_phy_tx_data_valid       ),
         .tx_phy_ready_i           ( s_phy_tx_data_ready       ),
+
         .rx_fifo_data_o           ( s_hyper_rx_data           ),
         .rx_fifo_valid_o          ( s_hyper_rx_data_valid     ),
         .rx_fifo_ready_i          ( s_hyper_rx_data_ready     ),
+
         .rx_phy_data_i            ( s_phy_rx_data             ),
         .rx_phy_valid_i           ( s_phy_rx_data_valid       ),
         .rx_phy_ready_o           ( s_phy_rx_data_ready       ),
-        .trans_phy_valid_o        ( s_trans_phy_valid         ),
-        .trans_phy_ready_i        ( s_trans_phy_ready         ),
-        .trans_phy_address_o      ( s_trans_phy_address       ),
-        .trans_phy_cs_o           ( s_trans_phy_cs            ),
-        .trans_phy_write_o        ( s_trans_phy_write         ),
-        .trans_phy_burst_o        ( s_trans_phy_burst         ),
-        .trans_phy_burst_type_o   ( s_trans_phy_burst_type    ),
-        .trans_phy_address_space_o( s_trans_phy_address_space )
+
+        .trans_phy_valid_o        ( s_phy_trans_valid         ),
+        .trans_phy_ready_i        ( s_phy_trans_ready         ),
+        .trans_phy_address_o      ( s_phy_trans_address       ),
+        .trans_phy_cs_o           ( s_phy_trans_cs            ),
+        .trans_phy_write_o        ( s_phy_trans_write         ),
+        .trans_phy_burst_o        ( s_phy_trans_burst         ),
+        .trans_phy_burst_type_o   ( s_phy_trans_burst_type    ),
+        .trans_phy_address_space_o( s_phy_trans_address_space )
     );
 
     hyperbus_phy #(
-        .NR_CS(4),
+        .NR_CS(2),
         .BURST_WIDTH(TRANS_SIZE)
     ) i_hyperbus_phy (
         .clk0                              ( s_clk_hyper_0                   ),
         .clk90                             ( s_clk_hyper_90                  ),
 
         .rst_ni                            ( rstn_i                          ),
+
+        .clk_test                          ( 1'b0                            ),
         .test_en_ti                        ( dft_test_mode_i                 ),
 
         .config_t_latency_access_i         ( s_cfg_latency_access            ),
@@ -342,8 +356,8 @@ module udma_hyperbus_top
 
     udma_dc_fifo #(32,BUFFER_WIDTH) u_dc_tx
     (
-        .dst_clk_i          ( s_clk_hyper_0         ),   
-        .dst_rstn_i         ( rstn_i                ),  
+        .dst_clk_i          ( s_clk_hyper_0         ),
+        .dst_rstn_i         ( rstn_i                ),
         .dst_data_o         ( s_hyper_tx_data       ),
         .dst_valid_o        ( s_hyper_tx_data_valid ),
         .dst_ready_i        ( s_hyper_tx_data_ready ),
@@ -361,17 +375,17 @@ module udma_hyperbus_top
         .dst_data_o         ( data_rx_o             ),
         .dst_valid_o        ( data_rx_valid_o       ),
         .dst_ready_i        ( data_rx_ready_i       ),
-        .src_clk_i          ( s_clk_hyper_0         ),  
-        .src_rstn_i         ( rstn_i                ),  
-        .src_data_i         ( s_hyper_data_rx       ),
-        .src_valid_i        ( s_hyper_data_rx_valid ),
-        .src_ready_o        ( s_hyper_data_rx_ready )
+        .src_clk_i          ( s_clk_hyper_0         ),
+        .src_rstn_i         ( rstn_i                ),
+        .src_data_i         ( s_hyper_rx_data       ),
+        .src_valid_i        ( s_hyper_rx_data_valid ),
+        .src_ready_o        ( s_hyper_rx_data_ready )
     );
 
     udma_dc_fifo #(TRANS_FIFO_SIZE,6) i_dc_transaction_fifo
     (
-        .src_clk_i          ( sys_clk_i           ),  
-        .src_rstn_i         ( rstn_i              ),  
+        .src_clk_i          ( sys_clk_i           ),
+        .src_rstn_i         ( rstn_i              ),
         .src_data_i         ( s_cfg_trans_data    ),
         .src_valid_i        ( s_cfg_trans_valid   ),
         .src_ready_o        ( s_cfg_trans_ready   ),
@@ -384,8 +398,8 @@ module udma_hyperbus_top
 
     udma_dc_fifo #(TRANS_ARG_SIZE,6) i_dc_argument_fifo
     (
-        .src_clk_i          ( sys_clk_i       ),  
-        .src_rstn_i         ( rstn_i          ),  
+        .src_clk_i          ( sys_clk_i       ),
+        .src_rstn_i         ( rstn_i          ),
         .src_data_i         ( s_cfg_arg_data  ),
         .src_valid_i        ( s_cfg_arg_valid ),
         .src_ready_o        ( s_cfg_arg_ready ),

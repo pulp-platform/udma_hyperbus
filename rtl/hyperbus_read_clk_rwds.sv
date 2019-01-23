@@ -19,7 +19,7 @@ module hyperbus_read_clk_rwds #(
     input  logic                   clk_test,
     input  logic                   test_en_ti,
 
-    input logic [31:0]             cfg_rwds_delay_line_i,
+    input logic [2:0]             cfg_rwds_delay_line_i,
 
     input logic                    hyper_rwds_i,
     input logic [7:0]              hyper_dq_i,

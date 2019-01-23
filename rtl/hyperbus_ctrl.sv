@@ -22,7 +22,7 @@ module hyperbus_ctrl #(
     input  logic                       tx_fifo_valid_i,
     input  logic                       tx_fifo_ready_o,
 
-    output logic                [16:0] tx_phy_data_o,
+    output logic                [15:0] tx_phy_data_o,
     output logic                       tx_phy_valid_o,
     output logic                 [1:0] tx_phy_strb_o,
     input  logic                       tx_phy_ready_i,
@@ -31,7 +31,7 @@ module hyperbus_ctrl #(
     output logic                       rx_fifo_valid_o,
     input  logic                       rx_fifo_ready_i,
 
-    input  logic                [16:0] rx_phy_data_i,
+    input  logic                [15:0] rx_phy_data_i,
     input  logic                       rx_phy_valid_i,
     output logic                       rx_phy_ready_o,
 
@@ -41,14 +41,14 @@ module hyperbus_ctrl #(
     output logic                 [1:0] trans_phy_cs_o,
     output logic                       trans_phy_write_o,
     output logic      [TRANS_SIZE-1:0] trans_phy_burst_o,
-    output logic                 [1:0] trans_phy_burst_type_o,
+    output logic                       trans_phy_burst_type_o,
     output logic                       trans_phy_address_space_o
- 
+
 );
     logic                  s_trans_read;
     logic [TRANS_SIZE-1:0] s_trans_size;
     logic           [31:0] s_trans_addr;
-    logic            [3:0] s_trans_mode;
+    logic            [2:0] s_trans_mode;
 
     logic                  s_trans_phy_write;
     logic                  s_trans_phy_addr_space;
@@ -66,9 +66,9 @@ module hyperbus_ctrl #(
 
     enum logic [2:0] { ST_IDLE, ST_RX_LSB, ST_RX_SEND, ST_TX_SEND} r_state,s_state_next;
 
-    assign s_trans_mode = trans_data_i[3:0];
-    assign s_trans_read = trans_data_i[4];
-    assign s_trans_size = trans_data_i[5+TRANS_SIZE-1:5];
+    assign s_trans_mode = trans_data_i[2:0];
+    assign s_trans_read = trans_data_i[3];
+    assign s_trans_size = trans_data_i[4+TRANS_SIZE-1:4];
     assign s_trans_addr = trans_data_i[TRANS_DATA_SIZE-1:TRANS_DATA_SIZE-32];
     assign s_trans_na   = s_trans_addr[0]; //if first bit of address is not 0 then it is non aligned
 
@@ -86,7 +86,7 @@ module hyperbus_ctrl #(
     s_trans_phy_addr       = s_trans_addr;
     s_trans_phy_size       = s_trans_size;
     s_trans_phy_addr_space = 1'b0;
-    s_trans_phy_burst_type = 2'b01;
+    s_trans_phy_burst_type = 1'b1;
     s_trans_phy_write      = ~s_trans_read;
     s_sample_data          = 1'b0;
     s_sample_cnt           = 1'b0;
